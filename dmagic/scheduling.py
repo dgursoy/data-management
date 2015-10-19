@@ -86,7 +86,9 @@ __all__ = ['create_experiment_id',
 
 debug = False
 
+
 class HTTPSConnectionV3(httplib.HTTPSConnection):
+
     def __init__(self, *args, **kwargs):
         httplib.HTTPSConnection.__init__(self, *args, **kwargs)
 
@@ -96,18 +98,21 @@ class HTTPSConnectionV3(httplib.HTTPSConnection):
             self.sock = sock
             self._tunnel()
         try:
-            print ("using connection")
-            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file, \
+            print("using connection")
+            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file,
                                         ssl_version=ssl.PROTOCOL_SSLv3)
         except ssl.SSLError, e:
             print("Trying SSLv3.")
-            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file, \
+            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file,
                                         ssl_version=ssl.PROTOCOL_SSLv23)
 
+
 class HTTPSHandlerV3(urllib2.HTTPSHandler):
+
     def https_open(self, req):
         print "using this opener"
         return self.do_open(HTTPSConnectionV3, req)
+
 
 def setSoapHeader(client, username, password):
     security = Security()
@@ -117,6 +122,7 @@ def setSoapHeader(client, username, password):
     if debug:
         print security
     client.set_options(wsse=security)
+
 
 def findRunName(startDate, endDate):
     """Find the official run name for the run that spans the
@@ -153,12 +159,14 @@ def findRunName(startDate, endDate):
             raise ex
     return runName
 
+
 def findBeamlineSchedule(beamlineName, runName):
     """Find beamline schedule for given beamlineName and runName"""
 
     runScheduleServiceClient, beamlineScheduleServiceClient, beamline = setup_connection()
     try:
-        result  = beamlineScheduleServiceClient.service.findBeamlineSchedule(beamlineName, runName)
+        result = beamlineScheduleServiceClient.service.findBeamlineSchedule(
+            beamlineName, runName)
     except SAXParseException as ex:
         print "ERROR in findBeamlineSchedule\n"
         traceback.print_exc()
@@ -166,12 +174,14 @@ def findBeamlineSchedule(beamlineName, runName):
 
     return result
 
+
 def findBeamtimeRequestsByBeamline(beamlineName, runName):
     """Find beamline schedule for given beamlineName and runName
 
     Returns schedule object."""
     try:
-        result  = beamlineScheduleServiceClient.service.findBeamtimeRequestsByBeamline(beamlineName, runName)
+        result = beamlineScheduleServiceClient.service.findBeamtimeRequestsByBeamline(
+            beamlineName, runName)
     except SAXParseException:
         print "ERROR in findBeamtimeRequestsByBeamline"
     except Exception:
@@ -180,17 +190,18 @@ def findBeamtimeRequestsByBeamline(beamlineName, runName):
         sys.exit(2)
     return result
 
+
 def setup_connection():
-    
+
     home = expanduser("~")
     credentials = os.path.join(home, 'scheduling.ini')
-    
+
     cf = ConfigParser.ConfigParser()
     cf.read(credentials)
     username = cf.get('credentials', 'username')
     password = cf.get('credentials', 'password')
     beamline = cf.get('settings', 'beamline')
-    
+
     # Uncomment one if using ANL INTERNAL or EXTERNAL network
     #base = cf.get('hosts', 'internal')
     base = cf.get('hosts', 'external')
@@ -199,10 +210,10 @@ def setup_connection():
     logging.raiseExceptions = 0
 
     beamlineScheduleServiceURL = base + \
-         'beamlineScheduleService/beamlineScheduleWebService.wsdl'
+        'beamlineScheduleService/beamlineScheduleWebService.wsdl'
 
     runScheduleServiceURL = base + \
-         'runScheduleService/runScheduleWebService.wsdl'
+        'runScheduleService/runScheduleWebService.wsdl'
 
     try:
         credentials = dict(username=username, password=password)
@@ -215,7 +226,8 @@ def setup_connection():
         result = setSoapHeader(runScheduleServiceClient, username, password)
         beamlineScheduleServiceClient = Client(beamlineScheduleServiceURL)
         beamlineScheduleServiceClient.options.cache.setduration(seconds=10)
-        result = setSoapHeader(beamlineScheduleServiceClient, username, password)
+        result = setSoapHeader(
+            beamlineScheduleServiceClient, username, password)
     except Exception, ex:
         print "CANNOT OPEN SERVICES:" + str(ex)
         raise
@@ -223,20 +235,21 @@ def setup_connection():
 
     return runScheduleServiceClient, beamlineScheduleServiceClient, beamline
 
+
 def get_users(date=None):
     """
     Get users running at beamline at a specific date
-     
+
     Parameters
     ----------
     date : date
         Experiment date
-    
+
     Returns
     -------
     users : dictionary-like object containing user information      
     """
-    
+
     runScheduleServiceClient, beamlineScheduleServiceClient, beamline = setup_connection()
     if not date:
         date = datetime.datetime.now()
@@ -249,14 +262,16 @@ def get_users(date=None):
         try:
             if event.activityType.activityTypeName in ['GUP', 'PUP', 'rapid-access', 'sector staff']:
                 if date >= event.startTime and date <= event.endTime:
-                        for experimenter in event.beamtimeRequest.proposal.experimenters.experimenter:
-                            for key in experimenter.__keylist__:
-                                users[experimenter.lastName][key] = getattr(experimenter, key)
+                    for experimenter in event.beamtimeRequest.proposal.experimenters.experimenter:
+                        for key in experimenter.__keylist__:
+                            users[experimenter.lastName][
+                                key] = getattr(experimenter, key)
         except:
             ipdb.set_trace()
             raise
 
     return users
+
 
 def get_proposal_id(date=None):
     """Find the proposal number (GUP) for a given beamline and date
@@ -275,12 +290,13 @@ def get_proposal_id(date=None):
         try:
             if event.activityType.activityTypeName in ['GUP', 'PUP', 'rapid-access', 'sector staff']:
                 if date >= event.startTime and date <= event.endTime:
-                        proposal_id = event.beamtimeRequest.proposal.id
+                    proposal_id = event.beamtimeRequest.proposal.id
         except:
             ipdb.set_trace()
             raise
 
     return proposal_id
+
 
 def get_proposal_title(date=None):
     """Find the proposal title for a given beamline and date
@@ -298,7 +314,7 @@ def get_proposal_title(date=None):
         try:
             if event.activityType.activityTypeName in ['GUP', 'PUP', 'rapid-access', 'sector staff']:
                 if date >= event.startTime and date <= event.endTime:
-                        proposal_title = event.beamtimeRequest.proposal.proposalTitle
+                    proposal_title = event.beamtimeRequest.proposal.proposalTitle
         except:
             ipdb.set_trace()
             raise
@@ -322,7 +338,7 @@ def get_experiment_start(date=None):
         try:
             if event.activityType.activityTypeName in ['GUP', 'PUP', 'rapid-access', 'sector staff']:
                 if date >= event.startTime and date <= event.endTime:
-                        experiment_start = event.startTime
+                    experiment_start = event.startTime
         except:
             ipdb.set_trace()
             raise
@@ -346,7 +362,7 @@ def get_experiment_end(date=None):
         try:
             if event.activityType.activityTypeName in ['GUP', 'PUP', 'rapid-access', 'sector staff']:
                 if date >= event.startTime and date <= event.endTime:
-                        experiment_end = event.endTime
+                    experiment_end = event.endTime
         except:
             ipdb.set_trace()
             raise
@@ -371,36 +387,36 @@ def get_beamtime_request(date=None):
         try:
             if event.activityType.activityTypeName in ['GUP', 'PUP', 'rapid-access', 'sector staff']:
                 if date >= event.startTime and date <= event.endTime:
-                        beamtime_request = event.beamtimeRequest.id
+                    beamtime_request = event.beamtimeRequest.id
         except:
             ipdb.set_trace()
             raise
 
     return beamtime_request
-    
+
 
 def create_experiment_id(date=None):
     """
     Generate a unique experiment id as g + GUP # + r + Beamtime Request
-     
+
     Parameters
     ----------
     date : date
         Experiment date
-    
+
     Returns
     -------
     experiment id       
     """
-    
+
     datetime_format = '%Y-%m-%dT%H:%M:%S%z'
-   
+
     # scheduling system settings
     print "\nCrating a unique experiment ID... "
     runScheduleServiceClient, beamlineScheduleServiceClient, beamline = setup_connection()
     proposal_id = get_proposal_id(date.replace(tzinfo=None))
     beamtime_request = get_beamtime_request(date.replace(tzinfo=None))
-    
+
     experiment_id = 'g' + str(proposal_id) + 'r' + str(beamtime_request)
 
     return experiment_id
@@ -409,12 +425,12 @@ def create_experiment_id(date=None):
 def find_experiment_start(date=None):
     """
     Find the experiment starting date
-     
+
     Parameters
     ----------
     date : date
         Experiment date
-    
+
     Returns
     -------
     Experiment Stating date : date        
@@ -427,19 +443,19 @@ def find_experiment_start(date=None):
     runScheduleServiceClient, beamlineScheduleServiceClient, beamline = setup_connection()
 
     experiment_start = get_experiment_start(date.replace(tzinfo=None))
- 
+
     return experiment_start
-    
+
 
 def find_users(date=None):
     """
     Find users running at beamline at a specific date
-     
+
     Parameters
     ----------
     date : date
         Experiment date
-    
+
     Returns
     -------
     users : dictionary-like object containing user information        
@@ -448,19 +464,19 @@ def find_users(date=None):
     print "\nFinding users ... "
     runScheduleServiceClient, beamlineScheduleServiceClient, beamline = setup_connection()
     users = get_users(date.replace(tzinfo=None))
-    
+
     return users
 
 
 def find_pi_last_name(date=None):
     """
     Find the Principal Investigator (PI) running at beamline at a specific date
-     
+
     Parameters
     ----------
     date : date
         Experiment date
-    
+
     Returns
     -------
     last_name : str
@@ -472,51 +488,51 @@ def find_pi_last_name(date=None):
 
     for tag in users:
         if users[tag].get('piFlag') != None:
-            first_name = str(users[tag]['firstName']) 
-            last_name = str(users[tag]['lastName'])            
+            first_name = str(users[tag]['firstName'])
+            last_name = str(users[tag]['lastName'])
             role = "*"
             institution = str(users[tag]['institution'])
             badge = str(users[tag]['badge'])
             email = str(users[tag]['email'])
 
-    return remove_disallowed_filename_chars(last_name)     
+    return remove_disallowed_filename_chars(last_name)
 
 
 def print_users(users):
     """
     Print the users running at beamline at a specific date
-     
+
     Parameters
     ----------
     users : dictionary-like object containing user information
-    
-    
+
+
     Returns
     -------
     Print user info        
     """
     for tag in users:
         if users[tag].get('piFlag') != None:
-            name = str(users[tag]['firstName'] + ' ' + users[tag]['lastName'])            
+            name = str(users[tag]['firstName'] + ' ' + users[tag]['lastName'])
             role = "*"
             institution = str(users[tag]['institution'])
             badge = str(users[tag]['badge'])
             email = str(users[tag]['email'])
             print "", role, badge, name, institution, email
-        else:            
+        else:
             print "", users[tag]['badge'], users[tag]['firstName'], users[tag]['lastName'], users[tag]['institution'], users[tag]['email']
-    print "(*) Proposal PI"        
+    print "(*) Proposal PI"
 
 
 def print_experiment_info(date=None):
     """
     Print the experiment info running at beamline at a specific date
-     
+
     Parameters
     ----------
     date : date
         Experiment date
-    
+
     Returns
     -------
     Print experiment information        
@@ -536,7 +552,7 @@ def print_experiment_info(date=None):
     experiment_start = get_experiment_start(date.replace(tzinfo=None))
     experiment_end = get_experiment_end(date.replace(tzinfo=None))
 
-    print "\tRun Name: ", run_name 
+    print "\tRun Name: ", run_name
     print "\n\tProposal Title: ", proposal_title
     print "\tExperiment Start: ", experiment_start
     print "\tExperiment End: ", experiment_end
@@ -546,13 +562,14 @@ def print_experiment_info(date=None):
         if users[tag].get('email') != None:
             email = str(users[tag]['email'])
             print "\t\t", email
-        else:            
+        else:
             print "\tMissing e-mail for:", users[tag]['badge'], users[tag]['firstName'], users[tag]['lastName'], users[tag]['institution']
+
 
 def remove_disallowed_filename_chars(last_name):
     """
     Remove from user last name characters that are not compatible folder names.
-     
+
     Parameters
     ----------
     last_name : str
@@ -563,6 +580,9 @@ def remove_disallowed_filename_chars(last_name):
         user last name compatible with directory name   
     """
 
-    valid_folder_name_chars = "-_%s%s" % (string.ascii_letters, string.digits)    cleaned_folder_name = unicodedata.normalize('NFKD', last_name.decode('utf-8', 'ignore')).encode('ASCII', 'ignore')    
-    return ''.join(c for c in cleaned_folder_name if c in valid_folder_name_chars)
+    valid_folder_name_chars = "-_%s%s" % (string.ascii_letters, string.digits)
 
+    cleaned_folder_name = unicodedata.normalize(
+        'NFKD', last_name.decode('utf-8', 'ignore')).encode('ASCII', 'ignore')
+
+    return ''.join(c for c in cleaned_folder_name if c in valid_folder_name_chars)
